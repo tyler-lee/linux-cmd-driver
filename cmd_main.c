@@ -72,7 +72,7 @@ static SIMPLE_DEV_PM_OPS(cmd_drv_pm, cmd_pm_suspend, cmd_pm_resume);
 static int cmd_dev_init(struct device *dev)
 {
 	int ret = 0;
-	pr_info("linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
+	pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
 
 	cmd_dev.parent = dev;
 	ret = misc_register(&cmd_dev);
@@ -97,6 +97,7 @@ static int cmd_drv_probe(struct platform_device *pdev)
 
 static int cmd_drv_remove(struct platform_device *pdev)
 {
+	pr_info("Deregister linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
 	if (!atomic_cmpxchg(&cmd_init_flag, 1, 0)) {
 		pr_warn("linux_cmd: second release call skipped\n");
 		return 0;
@@ -107,13 +108,13 @@ static int cmd_drv_remove(struct platform_device *pdev)
 	return 0;
 }
 
-//#ifdef CONFIG_ACPI
-//static struct acpi_device_id cmd_device_ids[] = {
-//	{"INT0E0C", 0},
-//	{"", 0},
-//};
-//MODULE_DEVICE_TABLE(acpi, cmd_device_ids);
-//#endif
+#ifdef CONFIG_ACPI
+static struct acpi_device_id cmd_device_ids[] = {
+	{"INT0E0C", 0},
+	{"", 0},
+};
+MODULE_DEVICE_TABLE(acpi, cmd_device_ids);
+#endif
 
 static struct platform_driver cmd_drv = {
 	.probe = cmd_drv_probe,
@@ -121,7 +122,9 @@ static struct platform_driver cmd_drv = {
 	.driver = {
 		.name			= "linux_cmd",
 		/*.pm			= &cmd_drv_pm,*/
-		/*.acpi_match_table	= ACPI_PTR(cmd_device_ids),*/
+#ifdef CONFIG_ACPI
+		.acpi_match_table	= ACPI_PTR(cmd_device_ids),
+#endif
 	},
 };
 
@@ -131,6 +134,7 @@ module_platform_driver(cmd_drv);
 static struct platform_device *pdev;
 int init_cmd_module(void)
 {
+	pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
 	platform_driver_register(&cmd_drv);
 	pdev = platform_device_register_simple("linux_cmd", 0, NULL, 0);
 	if (IS_ERR(pdev))
@@ -140,6 +144,7 @@ int init_cmd_module(void)
 
 void cleanup_cmd_module(void)
 {
+	pr_info("Deregister linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
 	dev_set_uevent_suppress(&pdev->dev, true);
 	platform_device_unregister(pdev);
 	platform_driver_unregister(&cmd_drv);

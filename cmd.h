@@ -1,5 +1,5 @@
-#ifndef __ARCH_INTEL_CMD_H__
-#define __ARCH_INTEL_CMD_H__
+#ifndef __ARCH_CMD_H__
+#define __ARCH_CMD_H__
 
 #include "cmd_user.h"
 #include <linux/kref.h>
