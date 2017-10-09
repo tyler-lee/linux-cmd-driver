@@ -42,6 +42,7 @@
 #define CMD_POWER_LOST_ENCLAVE		0x40000000
 #define CMD_LE_ROLLBACK			0x40000001
 
+#pragma pack(push, 1)
 /**
  * struct cmd_enclave_create - parameter structure for the
  *                             %CMD_IOC_ENCLAVE_CREATE ioctl
@@ -49,7 +50,7 @@
  */
 struct cmd_enclave_create  {
 	__u64	src;
-} __packed;
+};
 
 /**
  * struct cmd_enclave_add_page - parameter structure for the
@@ -64,7 +65,7 @@ struct cmd_enclave_add_page {
 	__u64	src;
 	__u64	secinfo;
 	__u16	mrmask;
-} __packed;
+};
 
 /**
  * struct cmd_enclave_init - parameter structure for the
@@ -77,10 +78,11 @@ struct cmd_enclave_init {
 	__u64	addr;
 	__u64	sigstruct;
 	__u64	einittoken;
-} __packed;
+};
 
 struct cmd_enclave_destroy {
 	__u64	addr;
-} __packed;
+};
+#pragma pack(pop)
 
 #endif /* _UAPI_ASM_X86_CMD_H */
