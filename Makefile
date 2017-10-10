@@ -17,7 +17,7 @@ clean:
 # run kernel build system to cleanup in current directory
 	$(MAKE) -C $(BUILDSYSTEM_DIR) M=$(PWD) clean
 
-install:
+install_prepare:
 	sudo mkdir -p "$(DEST_DIR)"
 	#if [ ! -f "$(DEST_DIR)/$(TARGET_MODULE).ko" ]; then
 		sudo cp $(TARGET_MODULE).ko "$(DEST_DIR)"
@@ -26,8 +26,16 @@ install:
 	sudo /sbin/depmod
 	sudo /sbin/modprobe $(TARGET_MODULE)
 
+install: install_prepare
+ifneq (/dev/$(TARGET_MODULE), $(wildcard /dev/$(TARGET_MODULE)))
+	sudo mknod /dev/$(TARGET_MODULE) c $(shell grep $(TARGET_MODULE) /proc/devices | cut -d ' ' -f 1) 0
+endif
+
 uninstall:
 	sudo /sbin/modprobe -r $(TARGET_MODULE)
+ifeq (/dev/$(TARGET_MODULE), $(wildcard /dev/$(TARGET_MODULE)))
+	sudo rm /dev/$(TARGET_MODULE)
+endif
 	#if [ -f "$(DEST_DIR)/$(TARGET_MODULE).ko" ]; then
 		sudo rm -rf "$(DEST_DIR)/$(TARGET_MODULE).ko"
 	#fi
