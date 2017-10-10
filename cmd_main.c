@@ -17,13 +17,24 @@ MODULE_AUTHOR("Huorong Li <lihuorong@iie.ac.cn>");
 MODULE_VERSION(DRV_VERSION);
 MODULE_LICENSE("Dual BSD/GPL");
 
-#ifdef CONFIG_COMPAT
-//long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
-long cmd_compat_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+static const char module_info[] = "Successfully install icmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n";
+static const ssize_t module_info_size = sizeof(module_info);
+static ssize_t device_file_read(struct file *file_ptr, char __user *user_buffer, size_t count, loff_t *position)
 {
-	return cmd_ioctl(filep, cmd, arg);
+    pr_info("icmd: Device file is read at offset = %i, read bytes count = %u", (int)*position, (unsigned int)count );
+    /* If position is behind the end of a file we have nothing to read */
+    if( *position >= module_info_size )
+        return 0;
+    /* If a user tries to read more than we have, read only as many bytes as we have */
+    if( *position + count > module_info_size )
+        count = module_info_size - *position;
+    if( copy_to_user(user_buffer, module_info + *position, count) != 0 )
+        return -EFAULT;
+    /* Move reading position */
+    *position += count;
+
+    return count;
 }
-#endif
 
 static const struct file_operations cmd_fops = {
 	.owner			= THIS_MODULE,
@@ -31,117 +42,116 @@ static const struct file_operations cmd_fops = {
 #ifdef CONFIG_COMPAT
 	.compat_ioctl		= cmd_compat_ioctl,
 #endif
-	/*.mmap			= cmd_mmap,*/
-	/*.get_unmapped_area	= cmd_get_unmapped_area,*/
-};
-
-static struct miscdevice cmd_dev = {
-	.name	= "icmd",
-	.fops	= &cmd_fops,
-	.mode   = 0666,
+	.read    = device_file_read,
 };
 
 /*
-static int cmd_pm_suspend(struct device *dev)
-{
-	struct cmd_tgid_ctx *ctx;
-	struct cmd_encl *encl;
+	static struct miscdevice cmd_dev = {
+		.name	= "icmd",
+		.fops	= &cmd_fops,
+		.mode   = 0666,
+	};
 
-	kthread_stop(kcmdswapd_tsk);
-	kcmdswapd_tsk = NULL;
+	static int cmd_pm_suspend(struct device *dev)
+	{
+		struct cmd_tgid_ctx *ctx;
+		struct cmd_encl *encl;
 
-	list_for_each_entry(ctx, &cmd_tgid_ctx_list, list) {
-		list_for_each_entry(encl, &ctx->encl_list, encl_list) {
-			cmd_invalidate(encl, false);
-			encl->flags |= CMD_ENCL_SUSPEND;
-			flush_work(&encl->add_page_work);
+		kthread_stop(kcmdswapd_tsk);
+		kcmdswapd_tsk = NULL;
+
+		list_for_each_entry(ctx, &cmd_tgid_ctx_list, list) {
+			list_for_each_entry(encl, &ctx->encl_list, encl_list) {
+				cmd_invalidate(encl, false);
+				encl->flags |= CMD_ENCL_SUSPEND;
+				flush_work(&encl->add_page_work);
+			}
 		}
+
+		return 0;
 	}
 
-	return 0;
-}
+	static int cmd_pm_resume(struct device *dev)
+	{
+		kcmdswapd_tsk = kthread_run(kcmdswapd, NULL, "kswapd");
+		return 0;
+	}
 
-static int cmd_pm_resume(struct device *dev)
-{
-	kcmdswapd_tsk = kthread_run(kcmdswapd, NULL, "kswapd");
-	return 0;
-}
+	static SIMPLE_DEV_PM_OPS(cmd_drv_pm, cmd_pm_suspend, cmd_pm_resume);
 
-static SIMPLE_DEV_PM_OPS(cmd_drv_pm, cmd_pm_suspend, cmd_pm_resume);
+	static int cmd_dev_init(struct device *dev)
+	{
+		int ret = 0;
+		pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
+
+		cmd_dev.parent = dev;
+		ret = misc_register(&cmd_dev);
+		if (ret) {
+			pr_err("linux_cmd: misc_register() failed\n");
+		}
+
+		return ret;
+	}
+
+	static atomic_t cmd_init_flag = ATOMIC_INIT(0);
+
+	static int cmd_drv_probe(struct platform_device *pdev)
+	{
+		int ret = 0;
+		if (atomic_cmpxchg(&cmd_init_flag, 0, 1)) {
+			pr_warn("linux_cmd: second initialization call skipped\n");
+			return 0;
+		}
+		pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
+
+		cmd_dev.parent = &pdev->dev;
+		ret = misc_register(&cmd_dev);
+		if (ret) {
+			pr_err("linux_cmd: misc_register() failed\n");
+		}
+
+		return ret;
+		//return cmd_dev_init(&pdev->dev);
+	}
+
+	static int cmd_drv_remove(struct platform_device *pdev)
+	{
+		pr_info("Deregister linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
+		if (!atomic_cmpxchg(&cmd_init_flag, 1, 0)) {
+			pr_warn("linux_cmd: second release call skipped\n");
+			return 0;
+		}
+
+		misc_deregister(&cmd_dev);
+
+		return 0;
+	}
+
+#ifdef CONFIG_ACPI
+	static struct acpi_device_id cmd_device_ids[] = {
+		{"INT0E0C", 0},
+		{"", 0},
+	};
+	MODULE_DEVICE_TABLE(acpi, cmd_device_ids);
+#endif
+
+	static struct platform_driver cmd_drv = {
+		.probe = cmd_drv_probe,
+		.remove = cmd_drv_remove,
+		.driver = {
+			.name			= "linux_cmd",
+			//.pm			= &cmd_drv_pm,
+#ifdef CONFIG_ACPI
+			.acpi_match_table	= ACPI_PTR(cmd_device_ids),
+#endif
+		},
+	};
 */
-
-static int cmd_dev_init(struct device *dev)
-{
-	int ret = 0;
-	pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
-
-	cmd_dev.parent = dev;
-	ret = misc_register(&cmd_dev);
-	if (ret) {
-		pr_err("linux_cmd: misc_register() failed\n");
-	}
-
-	return ret;
-}
-
-static atomic_t cmd_init_flag = ATOMIC_INIT(0);
-
-static int cmd_drv_probe(struct platform_device *pdev)
-{
-	int ret = 0;
-	if (atomic_cmpxchg(&cmd_init_flag, 0, 1)) {
-		pr_warn("linux_cmd: second initialization call skipped\n");
-		return 0;
-	}
-	pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
-
-	cmd_dev.parent = &pdev->dev;
-	ret = misc_register(&cmd_dev);
-	if (ret) {
-		pr_err("linux_cmd: misc_register() failed\n");
-	}
-
-	return ret;
-	/*return cmd_dev_init(&pdev->dev);*/
-}
-
-static int cmd_drv_remove(struct platform_device *pdev)
-{
-	pr_info("Deregister linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
-	if (!atomic_cmpxchg(&cmd_init_flag, 1, 0)) {
-		pr_warn("linux_cmd: second release call skipped\n");
-		return 0;
-	}
-
-	misc_deregister(&cmd_dev);
-
-	return 0;
-}
-
-#ifdef CONFIG_ACPI
-static struct acpi_device_id cmd_device_ids[] = {
-	{"INT0E0C", 0},
-	{"", 0},
-};
-MODULE_DEVICE_TABLE(acpi, cmd_device_ids);
-#endif
-
-static struct platform_driver cmd_drv = {
-	.probe = cmd_drv_probe,
-	.remove = cmd_drv_remove,
-	.driver = {
-		.name			= "linux_cmd",
-		/*.pm			= &cmd_drv_pm,*/
-#ifdef CONFIG_ACPI
-		.acpi_match_table	= ACPI_PTR(cmd_device_ids),
-#endif
-	},
-};
 
 /*#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 17, 0))*/
 /*module_platform_driver(cmd_drv);*/
 /*#else*/
-static struct platform_device *pdev;
+/*static struct platform_device *pdev;*/
 static int icmd_major_number = 0;
 static const char device_name[] = "icmd";
 int init_cmd_module(void)
@@ -157,7 +167,7 @@ int init_cmd_module(void)
 	result = register_chrdev( icmd_major_number, device_name, &cmd_fops );
 	if( result < 0 )
 	{
-		pr_warn("icmd:  can\'t register character device with errorcode = %i\n", result );
+		pr_warn("icmd: can\'t register character device with errorcode = %i\n", result );
 		return result;
 	}
 
