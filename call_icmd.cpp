@@ -16,7 +16,7 @@ bool icmd_open(int* pfd) {
 
     fd = open("/dev/icmd", O_RDWR);
     if (-1 == fd) {
-        printf("open icmd device failed\n");
+        printf("open /dev/icmd failed: errno = %d\n", errno);
 		return false;
     }
 
@@ -34,37 +34,42 @@ void icmd_close(int* pfd) {
 void icmd_disable_irq(int fd) {
 	int ret = 0;
 	struct cmd_params params = {0};
-	printf("\nTry %s: params: {%lld}\n", __FUNCTION__, params.addr);
+	//printf("\nTry %s: params: {%lld}\n", __FUNCTION__, params.addr);
     ret = ioctl(fd, CMD_IOC_DISABLE_IRQ, &params);
     if(ret) {
-        printf("CMD_IOC_DISABLE_IRQ failed: errno = %d\n", errno);
+        printf("%s failed: errno= %d\n", __FUNCTION__, errno);
 	}
 	else {
-        printf("CMD_IOC_DISABLE_IRQ success: params: {%lld}\n", params.addr);
+        printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
 	}
 }
 
 void icmd_enable_irq(int fd) {
 	int ret = 0;
 	struct cmd_params params = {0};
-	printf("\nTry %s: params: {%lld}\n", __FUNCTION__, params.addr);
+	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.addr);
     ret = ioctl(fd, CMD_IOC_ENABLE_IRQ, &params);
     if(ret) {
-        printf("CMD_IOC_ENABLE_IRQ failed: errno = %d\n", errno);
+        printf("%s failed: errno= %d\n", __FUNCTION__, errno);
 	}
 	else {
-        printf("CMD_IOC_ENABLE_IRQ success: params: {%lld}\n", params.addr);
+        printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
 	}
 }
 
 int main() {
 	int fd = -1;
-	if(icmd_open(&fd)) {
-		printf("open success\n");
-
-		icmd_disable_irq(fd);
-		icmd_enable_irq(fd);
-
-		icmd_close(&fd);
+	if(!icmd_open(&fd)) {
+		return -1;
 	}
+
+	icmd_disable_irq(fd);
+
+	for(size_t i = 0; i < 10000000000; i++);
+
+	icmd_enable_irq(fd);
+
+	icmd_close(&fd);
+
+	return 0;
 }
