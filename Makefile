@@ -28,7 +28,7 @@ install_prepare:
 
 install: install_prepare
 ifneq (/dev/$(TARGET_MODULE), $(wildcard /dev/$(TARGET_MODULE)))
-	sudo mknod /dev/$(TARGET_MODULE) c $(shell grep $(TARGET_MODULE) /proc/devices | cut -d ' ' -f 1) 0
+	sudo mknod --mode=0666 /dev/$(TARGET_MODULE) c $(shell grep $(TARGET_MODULE) /proc/devices | cut -d ' ' -f 1) 0
 endif
 
 uninstall:
