@@ -14,53 +14,33 @@
 #include <linux/shmem_fs.h>
 
 /**
- * cmd_ioc_enclave_create - handler for CMD_IOC_ENCLAVE_CREATE
- * @filep:	open file to /dev/cmd
+ * @filep:	open file to /dev/icmd
  * @cmd:	the command value
- * @arg:	pointer to the struct cmd_enclave_create
- *
- * Creates meta-data for an enclave and executes ENCLS(ECREATE)
+ * @arg:	pointer to the struct cmd_params
  */
-static long cmd_ioc_enclave_create(struct file *filep, unsigned int cmd,
+static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd,
 				   unsigned long arg)
 {
-	/*struct cmd_enclave_create *createp = (struct cmd_enclave_create *)arg;*/
-	return 0;
+	struct cmd_params *params = (struct cmd_params *)arg;
+	params->addr += 10;
+
+	pr_info("icmd: disable irq\n");
+	return CMD_SUCCESS;
 }
 
 /**
- * cmd_ioc_enclave_add_page - handler for CMD_IOC_ENCLAVE_ADD_PAGE
- *
- * @filep:	open file to /dev/cmd
+ * @filep:	open file to /dev/icmd
  * @cmd:	the command value
- * @arg:	pointer to the struct cmd_enclave_add_page
- *
- * Creates meta-data for an enclave page and enqueues ENCLS(EADD) that will
- * be processed by a worker thread later on.
+ * @arg:	pointer to the struct cmd_params
  */
-static long cmd_ioc_enclave_add_page(struct file *filep, unsigned int cmd,
-				     unsigned long arg)
+static long cmd_ioc_enable_irq(struct file *filep, unsigned int cmd,
+				   unsigned long arg)
 {
-	/*struct cmd_enclave_add_page *addp = (void *)arg;*/
-	return 0;
-}
+	struct cmd_params *params = (struct cmd_params *)arg;
+	params->addr += 10;
 
-/**
- * cmd_ioc_enclave_init - handler for CMD_IOC_ENCLAVE_INIT
- *
- * @filep:	open file to /dev/cmd
- * @cmd:	the command value
- * @arg:	pointer to the struct cmd_enclave_init
- *
- * Flushes the remaining enqueued ENCLS(EADD) operations and executes
- * ENCLS(EINIT). Does a number of retries because EINIT might fail because of an
- * interrupt storm.
- */
-static long cmd_ioc_enclave_init(struct file *filep, unsigned int cmd, unsigned long arg)
-{
-	/*struct cmd_enclave_init *initp = (struct cmd_enclave_init *)arg;*/
-
-	return 0;
+	pr_info("icmd: enable irq\n");
+	return CMD_SUCCESS;
 }
 
 typedef long (*cmd_ioc_t)(struct file *filep, unsigned int cmd, unsigned long arg);
@@ -72,14 +52,11 @@ long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 	long ret;
 
 	switch (cmd) {
-	case CMD_IOC_ENCLAVE_CREATE:
-		handler = cmd_ioc_enclave_create;
+	case CMD_IOC_DISABLE_IRQ:
+		handler = cmd_ioc_disable_irq;
 		break;
-	case CMD_IOC_ENCLAVE_ADD_PAGE:
-		handler = cmd_ioc_enclave_add_page;
-		break;
-	case CMD_IOC_ENCLAVE_INIT:
-		handler = cmd_ioc_enclave_init;
+	case CMD_IOC_ENABLE_IRQ:
+		handler = cmd_ioc_enable_irq;
 		break;
 	default:
 		return -ENOIOCTLCMD;
@@ -96,3 +73,12 @@ long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 	return ret;
 }
+
+#ifdef CONFIG_COMPAT
+//long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
+long cmd_compat_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
+{
+	return cmd_ioctl(filep, cmd, arg);
+}
+#endif
+
