@@ -13,18 +13,27 @@
 #include <linux/hashtable.h>
 #include <linux/shmem_fs.h>
 
+//define per cpu irq flags
+DEFINE_PER_CPU(unsigned long, flags);
 /**
  * @filep:	open file to /dev/icmd
  * @cmd:	the command value
  * @arg:	pointer to the struct cmd_params
  */
-static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd,
-				   unsigned long arg)
-{
+static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd, unsigned long arg) {
 	struct cmd_params *params = (struct cmd_params *)arg;
-	params->addr += 10;
 
-	pr_info("icmd: disable irq\n");
+	//disable preempt: preempt_disable is nestable.
+	preempt_disable();
+	pr_info("icmd: core %d disable preempt\n", smp_processor_id());
+
+	params->addr = smp_processor_id();
+
+	//save interrupt flags
+	local_irq_save(get_cpu_var(flags));
+	put_cpu_var(flags);
+
+	pr_info("icmd: core %d disable irq\n", smp_processor_id());
 	return CMD_SUCCESS;
 }
 
@@ -33,20 +42,26 @@ static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd,
  * @cmd:	the command value
  * @arg:	pointer to the struct cmd_params
  */
-static long cmd_ioc_enable_irq(struct file *filep, unsigned int cmd,
-				   unsigned long arg)
-{
+static long cmd_ioc_enable_irq(struct file *filep, unsigned int cmd, unsigned long arg) {
 	struct cmd_params *params = (struct cmd_params *)arg;
-	params->addr += 10;
 
-	pr_info("icmd: enable irq\n");
+	//restore interrupt flags
+	local_irq_restore(get_cpu_var(flags));
+	put_cpu_var(flags);
+
+	params->addr = smp_processor_id();
+
+	//enable preempt: preempt_enable is nestable.
+	pr_info("icmd: core %d enable preempt\n", smp_processor_id());
+	preempt_enable();
+
+	pr_info("icmd: core %d enable irq\n", smp_processor_id());
 	return CMD_SUCCESS;
 }
 
 typedef long (*cmd_ioc_t)(struct file *filep, unsigned int cmd, unsigned long arg);
 //long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);
-long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
-{
+long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg) {
 	char data[256];
 	cmd_ioc_t handler = NULL;
 	long ret;
@@ -76,8 +91,7 @@ long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 
 #ifdef CONFIG_COMPAT
 //long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
-long cmd_compat_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
-{
+long cmd_compat_ioctl(struct file *filep, unsigned int cmd, unsigned long arg) {
 	return cmd_ioctl(filep, cmd, arg);
 }
 #endif

@@ -5,9 +5,12 @@
 #include <linux/ioctl.h>
 
 #define CMD_MAGIC 0xA5
+//#define _IOWR(type,nr,size)	_IOC(_IOC_READ|_IOC_WRITE,(type),(nr),(_IOC_TYPECHECK(size)))
+#define _CMD_IOCTL(type) _IOWR(CMD_MAGIC, type, struct cmd_params)
+//#define _CMD_IOCTL(type) _IOW(CMD_MAGIC, type, struct cmd_params)
 
-#define CMD_IOC_DISABLE_IRQ		_IOW(CMD_MAGIC, 0x00, struct cmd_params)
-#define CMD_IOC_ENABLE_IRQ		_IOW(CMD_MAGIC, 0x01, struct cmd_params)
+#define CMD_IOC_DISABLE_IRQ		_CMD_IOCTL(0x00)
+#define CMD_IOC_ENABLE_IRQ		_CMD_IOCTL(0x01)
 
 /* CMD leaf instruction return values */
 #define CMD_SUCCESS			0
