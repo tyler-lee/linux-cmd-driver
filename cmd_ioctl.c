@@ -56,17 +56,15 @@ static long cmd_ioc_enclave_add_page(struct file *filep, unsigned int cmd,
  * ENCLS(EINIT). Does a number of retries because EINIT might fail because of an
  * interrupt storm.
  */
-static long cmd_ioc_enclave_init(struct file *filep, unsigned int cmd,
-				 unsigned long arg)
+static long cmd_ioc_enclave_init(struct file *filep, unsigned int cmd, unsigned long arg)
 {
 	/*struct cmd_enclave_init *initp = (struct cmd_enclave_init *)arg;*/
 
 	return 0;
 }
 
-typedef long (*cmd_ioc_t)(struct file *filep, unsigned int cmd,
-			  unsigned long arg);
-
+typedef long (*cmd_ioc_t)(struct file *filep, unsigned int cmd, unsigned long arg);
+//long (*unlocked_ioctl) (struct file *, unsigned int, unsigned long);
 long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
 	char data[256];

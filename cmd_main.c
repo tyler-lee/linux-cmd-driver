@@ -18,6 +18,7 @@ MODULE_VERSION(DRV_VERSION);
 MODULE_LICENSE("Dual BSD/GPL");
 
 #ifdef CONFIG_COMPAT
+//long (*compat_ioctl) (struct file *, unsigned int, unsigned long);
 long cmd_compat_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
 	return cmd_ioctl(filep, cmd, arg);
@@ -87,12 +88,21 @@ static atomic_t cmd_init_flag = ATOMIC_INIT(0);
 
 static int cmd_drv_probe(struct platform_device *pdev)
 {
+	int ret = 0;
 	if (atomic_cmpxchg(&cmd_init_flag, 0, 1)) {
 		pr_warn("linux_cmd: second initialization call skipped\n");
 		return 0;
 	}
+	pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
 
-	return cmd_dev_init(&pdev->dev);
+	cmd_dev.parent = &pdev->dev;
+	ret = misc_register(&cmd_dev);
+	if (ret) {
+		pr_err("linux_cmd: misc_register() failed\n");
+	}
+
+	return ret;
+	/*return cmd_dev_init(&pdev->dev);*/
 }
 
 static int cmd_drv_remove(struct platform_device *pdev)
@@ -128,29 +138,48 @@ static struct platform_driver cmd_drv = {
 	},
 };
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 17, 0))
-module_platform_driver(cmd_drv);
-#else
+/*#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 17, 0))*/
+/*module_platform_driver(cmd_drv);*/
+/*#else*/
 static struct platform_device *pdev;
+static int icmd_major_number = 0;
+static const char device_name[] = "icmd";
 int init_cmd_module(void)
 {
+	int result;
 	pr_info("Register linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
-	platform_driver_register(&cmd_drv);
-	pdev = platform_device_register_simple("linux_cmd", 0, NULL, 0);
-	if (IS_ERR(pdev))
-		pr_err("platform_device_register_simple failed\n");
+	/*platform_driver_register(&cmd_drv);*/
+	/*pdev = platform_device_register_simple("linux_cmd", 0, NULL, 0);*/
+	/*if (IS_ERR(pdev))*/
+		/*pr_err("platform_device_register_simple failed\n");*/
+
+	/* Registering device */
+	result = register_chrdev( icmd_major_number, device_name, &cmd_fops );
+	if( result < 0 )
+	{
+		pr_warn("icmd:  can\'t register character device with errorcode = %i\n", result );
+		return result;
+	}
+
+	icmd_major_number = result;
+	pr_info("icmd: registered character device with major number = %i and minor numbers 0...255\n" , icmd_major_number );
+
 	return 0;
 }
 
 void cleanup_cmd_module(void)
 {
 	pr_info("Deregister linux_cmd: " DRV_DESCRIPTION " v" DRV_VERSION "\n");
-	dev_set_uevent_suppress(&pdev->dev, true);
-	platform_device_unregister(pdev);
-	platform_driver_unregister(&cmd_drv);
+	/*dev_set_uevent_suppress(&pdev->dev, true);*/
+	/*platform_device_unregister(pdev);*/
+	/*platform_driver_unregister(&cmd_drv);*/
+	if(icmd_major_number != 0)
+	{
+		unregister_chrdev(icmd_major_number, device_name);
+	}
 }
 
 module_init(init_cmd_module);
 module_exit(cleanup_cmd_module);
-#endif
+/*#endif*/
 
