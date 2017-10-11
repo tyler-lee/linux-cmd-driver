@@ -25,4 +25,9 @@ struct cmd_params  {
 };
 #pragma pack(pop)
 
+bool icmd_open(int* pfd);
+void icmd_close(int* pfd);
+void icmd_disable_irq(int fd);
+void icmd_enable_irq(int fd);
+
 #endif /* _UAPI_ASM_X86_CMD_H */
