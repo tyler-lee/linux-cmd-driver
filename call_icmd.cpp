@@ -58,19 +58,51 @@ void icmd_enable_irq(int fd) {
 	}
 }
 
+void icmd_set_interrupt(int fd) {
+	int ret = 0;
+	struct cmd_params params = {0};
+	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.addr);
+    ret = ioctl(fd, CMD_IOC_SET_INTERRUPT, &params);
+    if(ret) {
+        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
+	}
+	else {
+        printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
+	}
+}
+
+void test_irq(int fd) {
+	icmd_disable_irq(fd);
+
+	for(size_t i = 0; i < 1000000000; i++);
+	//sleep(1);
+	//printf("Process (%d) %s success\n", getpid(), __FUNCTION__);
+
+	icmd_enable_irq(fd);
+}
+
+const int core_num = 4;
+#include <thread>
+#include <iostream>
+using namespace std;
 int main() {
+	cout << endl << "Begin" << endl << endl;
 	int fd = -1;
 	if(!icmd_open(&fd)) {
 		return -1;
 	}
 
-	icmd_disable_irq(fd);
-
-	for(size_t i = 0; i < 10000000000; i++);
-
-	icmd_enable_irq(fd);
+	thread threads[core_num];
+	for(int i = 0; i < core_num; i++) {
+		//threads[i] = thread(icmd_set_interrupt, fd);
+		threads[i] = thread(test_irq, fd);
+	}
+	for(int i = 0; i < core_num; i++) {
+		threads[i].join();
+	}
 
 	icmd_close(&fd);
 
+	cout << endl << "Done" << endl << endl;
 	return 0;
 }
