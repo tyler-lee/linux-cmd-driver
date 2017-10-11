@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 #include "cmd_user.h"
 
@@ -16,7 +17,7 @@ bool icmd_open(int* pfd) {
 
     fd = open("/dev/icmd", O_RDWR);
     if (-1 == fd) {
-        printf("open /dev/icmd failed: errno = %d\n", errno);
+        printf("open /dev/icmd failed: errno= %d, %s\n", errno, strerror(errno));
 		return false;
     }
 
@@ -37,7 +38,7 @@ void icmd_disable_irq(int fd) {
 	//printf("\nTry %s: params: {%lld}\n", __FUNCTION__, params.addr);
     ret = ioctl(fd, CMD_IOC_DISABLE_IRQ, &params);
     if(ret) {
-        printf("%s failed: errno= %d\n", __FUNCTION__, errno);
+        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
         printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
@@ -50,7 +51,7 @@ void icmd_enable_irq(int fd) {
 	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.addr);
     ret = ioctl(fd, CMD_IOC_ENABLE_IRQ, &params);
     if(ret) {
-        printf("%s failed: errno= %d\n", __FUNCTION__, errno);
+        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
         printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
