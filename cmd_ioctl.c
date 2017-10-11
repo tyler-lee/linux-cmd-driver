@@ -21,19 +21,17 @@ DEFINE_PER_CPU(unsigned long, flags);
  * @arg:	pointer to the struct cmd_params
  */
 static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd, unsigned long arg) {
-	struct cmd_params *params = (struct cmd_params *)arg;
-
 	//disable preempt: preempt_disable is nestable.
 	preempt_disable();
-	pr_info("icmd: core %d disable preempt\n", smp_processor_id());
-
-	params->addr = smp_processor_id();
-
 	//save interrupt flags
 	local_irq_save(get_cpu_var(flags));
 	put_cpu_var(flags);
+	/*local_bh_disable();*/
 
-	pr_info("icmd: core %d disable irq\n", smp_processor_id());
+	struct cmd_params *params = (struct cmd_params *)arg;
+	params->addr = smp_processor_id();
+
+	pr_info("icmd: core %d disable preempt and irq\n", smp_processor_id());
 	return CMD_SUCCESS;
 }
 
@@ -43,19 +41,40 @@ static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd, unsigned l
  * @arg:	pointer to the struct cmd_params
  */
 static long cmd_ioc_enable_irq(struct file *filep, unsigned int cmd, unsigned long arg) {
-	struct cmd_params *params = (struct cmd_params *)arg;
+	pr_info("icmd: core %d enable preempt and irq\n", smp_processor_id());
 
+	struct cmd_params *params = (struct cmd_params *)arg;
+	params->addr = smp_processor_id();
+
+	/*local_bh_enable();*/
 	//restore interrupt flags
 	local_irq_restore(get_cpu_var(flags));
 	put_cpu_var(flags);
-
-	params->addr = smp_processor_id();
-
 	//enable preempt: preempt_enable is nestable.
-	pr_info("icmd: core %d enable preempt\n", smp_processor_id());
 	preempt_enable();
 
-	pr_info("icmd: core %d enable irq\n", smp_processor_id());
+	return CMD_SUCCESS;
+}
+
+static long cmd_ioc_set_interrupt(struct file *filep, unsigned int cmd, unsigned long arg) {
+	struct cmd_params *params = (struct cmd_params *)arg;
+	params->addr = smp_processor_id();
+	/*pit_prepare_sleep(100);*/
+	/*spin_local_irqsave();*/
+	preempt_disable();
+	local_irq_save(get_cpu_var(flags));
+	put_cpu_var(flags);
+
+	size_t i = 0;
+	size_t counter = 0;
+	/*for(i = 0; i < 10000000000; i++) counter++;*/
+	for(i = 0; i < 10000; i++) udelay(1000);
+	pr_info("icmd: core %d preempt\n", smp_processor_id());
+
+	local_irq_restore(get_cpu_var(flags));
+	put_cpu_var(flags);
+	preempt_enable();
+
 	return CMD_SUCCESS;
 }
 
@@ -72,6 +91,9 @@ long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg) {
 		break;
 	case CMD_IOC_ENABLE_IRQ:
 		handler = cmd_ioc_enable_irq;
+		break;
+	case CMD_IOC_SET_INTERRUPT:
+		handler = cmd_ioc_set_interrupt;
 		break;
 	default:
 		return -ENOIOCTLCMD;

@@ -11,6 +11,7 @@
 
 #define CMD_IOC_DISABLE_IRQ		_CMD_IOCTL(0x00)
 #define CMD_IOC_ENABLE_IRQ		_CMD_IOCTL(0x01)
+#define CMD_IOC_SET_INTERRUPT	_CMD_IOCTL(0x02)
 
 /* CMD leaf instruction return values */
 #define CMD_SUCCESS			0
