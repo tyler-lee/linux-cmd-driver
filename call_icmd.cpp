@@ -34,51 +34,54 @@ void icmd_close(int* pfd) {
 
 void icmd_disable_irq(int fd) {
 	int ret = 0;
-	struct cmd_params params = {0};
-	//printf("\nTry %s: params: {%lld}\n", __FUNCTION__, params.addr);
+	struct cmd_params params = {0, 0};
+	//printf("\nTry %s: params: {%lld}\n", __FUNCTION__, params.core);
     ret = ioctl(fd, CMD_IOC_DISABLE_IRQ, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
+        printf("Process (%d) %s success: params= {%lld, %lld}\n", getpid(), __FUNCTION__, params.core, params.flags);
 	}
 }
 
 void icmd_enable_irq(int fd) {
 	int ret = 0;
-	struct cmd_params params = {0};
-	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.addr);
+	struct cmd_params params = {0, 0};
+	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.core);
     ret = ioctl(fd, CMD_IOC_ENABLE_IRQ, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
+        printf("Process (%d) %s success: params= {%lld, %lld}\n", getpid(), __FUNCTION__, params.core, params.flags);
 	}
 }
 
 void icmd_set_interrupt(int fd) {
 	int ret = 0;
-	struct cmd_params params = {0};
-	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.addr);
+	struct cmd_params params = {0, 0};
+	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.core);
     ret = ioctl(fd, CMD_IOC_SET_INTERRUPT, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("Process (%d) %s success: params= {%lld}\n", getpid(), __FUNCTION__, params.addr);
+        printf("Process (%d) %s success: params= {%lld, %lld}\n", getpid(), __FUNCTION__, params.core, params.flags);
 	}
 }
 
-void test_irq(int fd) {
-	icmd_disable_irq(fd);
+void test_icmd(int fd) {
+   /* icmd_disable_irq(fd);*/
+	//icmd_disable_irq(fd);
+	//icmd_disable_irq(fd);
 
-	for(size_t i = 0; i < 1000000000; i++);
+	//for(size_t i = 0; i < 1000000000; i++);
+	icmd_set_interrupt(fd);
 	//sleep(1);
 	//printf("Process (%d) %s success\n", getpid(), __FUNCTION__);
 
-	icmd_enable_irq(fd);
+	//icmd_enable_irq(fd);
 }
 
 const int core_num = 4;
@@ -94,8 +97,7 @@ int main() {
 
 	thread threads[core_num];
 	for(int i = 0; i < core_num; i++) {
-		//threads[i] = thread(icmd_set_interrupt, fd);
-		threads[i] = thread(test_irq, fd);
+		threads[i] = thread(test_icmd, fd);
 	}
 	for(int i = 0; i < core_num; i++) {
 		threads[i].join();

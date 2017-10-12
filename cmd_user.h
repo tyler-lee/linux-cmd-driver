@@ -20,8 +20,8 @@
 
 #pragma pack(push, 1)
 struct cmd_params  {
-	__u64	addr;
-	//int para1;
+	__u64	core;
+	__u64	flags;
 	//char para2[12];
 };
 #pragma pack(pop)
