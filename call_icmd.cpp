@@ -85,11 +85,12 @@ void test_icmd(int fd) {
 	//printf("%ld, %s\n", sched_getcpu(), strerror(errno));
 
 	//for(size_t i = 0; i < 1000000000; i++);
-	icmd_set_interrupt(fd);
+	//icmd_set_interrupt(fd);
 	//sleep(1);
 	//printf("Process (%d) %s success\n", getpid(), __FUNCTION__);
 
 	//icmd_enable_irq(fd);
+	test_me_location();
 }
 
 const int core_num = 4;
@@ -102,6 +103,8 @@ int main() {
 	if(!icmd_open(&fd)) {
 		return -1;
 	}
+
+	test_me_location();
 
 	thread threads[core_num];
 	for(int i = 0; i < core_num; i++) {

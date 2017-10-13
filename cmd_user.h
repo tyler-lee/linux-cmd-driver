@@ -31,4 +31,6 @@ void icmd_close(int* pfd);
 void icmd_disable_irq(int fd);
 void icmd_enable_irq(int fd);
 
+#define test_me_location() do {printf("From %s\n", __FUNCTION__);} while(0)
+
 #endif /* _UAPI_ASM_X86_CMD_H */
