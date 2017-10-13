@@ -1,6 +1,7 @@
 *.un~
 *.ko
 *.o
+*.d
 *.cmd
 *.mod.*
 *.symvers

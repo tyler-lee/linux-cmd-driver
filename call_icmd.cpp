@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/syscall.h>
+#include <signal.h>
+#include <sched.h>
+
 #include "cmd_user.h"
 
 bool icmd_open(int* pfd) {
@@ -35,46 +39,50 @@ void icmd_close(int* pfd) {
 void icmd_disable_irq(int fd) {
 	int ret = 0;
 	struct cmd_params params = {0, 0};
-	//printf("\nTry %s: params: {%lld}\n", __FUNCTION__, params.core);
+	params.core = sched_getcpu();
+	printf("(%ld) Try %s: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
     ret = ioctl(fd, CMD_IOC_DISABLE_IRQ, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("Process (%d) %s success: params= {%lld, %lld}\n", getpid(), __FUNCTION__, params.core, params.flags);
+        printf("(%ld) %s success: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
 	}
 }
 
 void icmd_enable_irq(int fd) {
 	int ret = 0;
 	struct cmd_params params = {0, 0};
-	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.core);
+	params.core = sched_getcpu();
+	printf("(%ld) Try %s: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
     ret = ioctl(fd, CMD_IOC_ENABLE_IRQ, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("Process (%d) %s success: params= {%lld, %lld}\n", getpid(), __FUNCTION__, params.core, params.flags);
+        printf("(%ld) %s success: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
 	}
 }
 
 void icmd_set_interrupt(int fd) {
 	int ret = 0;
 	struct cmd_params params = {0, 0};
-	//printf("\nTry %s: params= {%lld}\n", __FUNCTION__, params.core);
+	params.core = sched_getcpu();
+	printf("(%ld) Try %s: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
     ret = ioctl(fd, CMD_IOC_SET_INTERRUPT, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("Process (%d) %s success: params= {%lld, %lld}\n", getpid(), __FUNCTION__, params.core, params.flags);
+        printf("(%ld) %s success: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
 	}
 }
 
 void test_icmd(int fd) {
-   /* icmd_disable_irq(fd);*/
+	//printf("Process (%d) %s\n", getpid(), __FUNCTION__);
+	//for(size_t i = 0; i < 800000000; i++);
 	//icmd_disable_irq(fd);
-	//icmd_disable_irq(fd);
+	//printf("%ld, %s\n", sched_getcpu(), strerror(errno));
 
 	//for(size_t i = 0; i < 1000000000; i++);
 	icmd_set_interrupt(fd);
