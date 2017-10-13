@@ -62,27 +62,30 @@ static long cmd_ioc_enable_irq(struct file *filep, unsigned int cmd, unsigned lo
 }
 
 static long cmd_ioc_set_interrupt(struct file *filep, unsigned int cmd, unsigned long arg) {
-   /* struct cmd_params *params = (struct cmd_params *)arg;*/
-	/*params->core = smp_processor_id();*/
-	/*[>pit_prepare_sleep(100);<]*/
-	/*[>spin_local_irqsave();<]*/
-	/*preempt_disable();*/
-	/*local_irq_save(get_cpu_var(flags));*/
-	/*put_cpu_var(flags);*/
-	cmd_ioc_disable_irq(filep, cmd, arg);
+	pr_info("=======icmd: core %d test preempt=======\n", smp_processor_id());
+	preempt_disable();
+	local_irq_disable();
+	pr_info("icmd: init runing on core %d\n", smp_processor_id());
 
+	/*cmd_ioc_disable_irq(filep, cmd, arg);*/
 	/*msleep(1);*/
 	/*ssleep(1);*/
 	/*udelay(unsigned long);*/
 	/*ndelay(unsigned long);*/
 	/*mdelay(unsigned long);*/
-	mdelay(2000);
-	pr_info("icmd: core %d preempt and irq\n", smp_processor_id());
+	/*mdelay(2000);*/
+	/*pr_info("icmd: core %d preempt and irq\n", smp_processor_id());*/
+	/*cmd_ioc_enable_irq(filep, cmd, arg);*/
 
-	/*local_irq_restore(get_cpu_var(flags));*/
-	/*put_cpu_var(flags);*/
-	/*preempt_enable();*/
-	cmd_ioc_enable_irq(filep, cmd, arg);
+	mdelay(3000);
+	pr_info("icmd: after sleep in disable irq runing on core %d\n", smp_processor_id());
+
+
+	preempt_enable();
+	local_irq_enable();
+
+	mdelay(3000);
+	pr_info("icmd: after sleep in enable irq runing on core %d\n", smp_processor_id());
 
 	return CMD_SUCCESS;
 }
