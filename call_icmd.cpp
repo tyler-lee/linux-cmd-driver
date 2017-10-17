@@ -12,8 +12,15 @@
 #include <sys/syscall.h>
 #include <signal.h>
 #include <sched.h>
+#include <pthread.h>
+#include <thread>
+#include <iostream>
 
 #include "cmd_user.h"
+
+using namespace std;
+
+const int core_num = 4;
 
 bool icmd_open(int* pfd) {
 	int fd = -1;
@@ -36,86 +43,188 @@ void icmd_close(int* pfd) {
 	}
 }
 
-void icmd_disable_irq(int fd) {
+void icmd_disable_irq(int fd, int tid) {
 	int ret = 0;
 	struct cmd_params params = {0, 0};
 	params.core = sched_getcpu();
-	printf("(%ld) Try %s: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
+	printf("(%d) Try %s: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
     ret = ioctl(fd, CMD_IOC_DISABLE_IRQ, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("(%ld) %s success: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
+        printf("(%d) %s success: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
 	}
 }
 
-void icmd_enable_irq(int fd) {
+void icmd_enable_irq(int fd, int tid) {
 	int ret = 0;
 	struct cmd_params params = {0, 0};
 	params.core = sched_getcpu();
-	printf("(%ld) Try %s: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
+	printf("(%d) Try %s: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
     ret = ioctl(fd, CMD_IOC_ENABLE_IRQ, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("(%ld) %s success: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
+        printf("(%d) %s success: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
 	}
 }
 
-void icmd_set_interrupt(int fd) {
+void icmd_set_interrupt(int fd, int tid) {
 	int ret = 0;
 	struct cmd_params params = {0, 0};
 	params.core = sched_getcpu();
-	printf("(%ld) Try %s: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
+	printf("(%d) Try %s: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
     ret = ioctl(fd, CMD_IOC_SET_INTERRUPT, &params);
     if(ret) {
         printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
 	}
 	else {
-        printf("(%ld) %s success: params= {%lld, %lld}\n", syscall(SYS_gettid), __FUNCTION__, params.core, params.flags);
+        printf("(%d) %s success: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
 	}
 }
 
-void test_icmd(int fd) {
+void print_policy_string(int policy) {
+	switch (policy)
+	{
+		case SCHED_FIFO:
+			printf ("policy= SCHED_FIFO");
+			break;
+		case SCHED_RR:
+			printf ("policy= SCHED_RR");
+			break;
+		case SCHED_OTHER:
+			printf ("policy= SCHED_OTHER");
+			break;
+		default:
+			printf ("policy= UNKNOWN");
+			break;
+	}
+}
+
+void show_thread_policy_and_priority() {
+	int policy;
+	sched_param sched;
+
+	int ret = pthread_getschedparam(pthread_self(), &policy, &sched);
+	if(ret != 0) printf("%s\n", strerror(errno));
+	assert(ret == 0);
+
+	printf("Thread %ld: ", pthread_self());
+	print_policy_string(policy);
+	printf (", priority= %d\n", sched.sched_priority);
+}
+void set_thread_policy_and_priority(int policy, int priority) {
+	sched_param sched;
+	sched.sched_priority = priority;
+	int ret = pthread_setschedparam(pthread_self(), policy, &sched);
+	if(ret != 0) printf("%s\n", strerror(errno));
+	assert(ret == 0);
+
+	printf ("Set thread %ld priority to %d\n", pthread_self(), priority);
+}
+void show_thread_policy_and_priority(pthread_attr_t *attr) {
+	int policy;
+	sched_param sched;
+
+	int ret = pthread_attr_getschedparam(attr, &sched);
+	assert(ret == 0);
+	ret == pthread_attr_getschedpolicy(attr, &policy);
+	assert(ret == 0);
+
+	printf("Thread %ld: ", pthread_self());
+	print_policy_string(policy);
+	printf (", priority= %d\n", sched.sched_priority);
+}
+void set_thread_policy_and_priority(pthread_attr_t *attr, int policy, int priority) {
+	sched_param sched;
+	sched.sched_priority = priority;
+	int ret = pthread_attr_setschedpolicy(attr, policy);
+	assert(ret == 0);
+	ret = pthread_attr_setschedparam(attr, &sched);
+	assert(ret == 0);
+}
+
+void* test_pthread_priority(void *) {
+	show_thread_policy_and_priority();
+}
+
+void test_stl_thread() {
 	//printf("Process (%d) %s\n", getpid(), __FUNCTION__);
 	//for(size_t i = 0; i < 800000000; i++);
-	//icmd_disable_irq(fd);
+	//icmd_disable_irq(fd, tid);
 	//printf("%ld, %s\n", sched_getcpu(), strerror(errno));
 
-	//for(size_t i = 0; i < 1000000000; i++);
+	for(size_t i = 0; i < 10000000000; i++);
+	show_thread_policy_and_priority();
 	//icmd_set_interrupt(fd);
 	//sleep(1);
 	//printf("Process (%d) %s success\n", getpid(), __FUNCTION__);
 
-	//icmd_enable_irq(fd);
-	test_me_location();
+	//icmd_enable_irq(fd, tid);
+	//test_me_location();
 }
 
-const int core_num = 4;
-#include <thread>
-#include <iostream>
-using namespace std;
+int fd = -1;
+//STL thread
 int main() {
 	cout << endl << "Begin" << endl << endl;
-	int fd = -1;
 	if(!icmd_open(&fd)) {
 		return -1;
 	}
 
-	test_me_location();
+	printf("In %s:\n", __FUNCTION__);
+	set_thread_policy_and_priority(SCHED_FIFO, sched_get_priority_max(SCHED_FIFO));
+	show_thread_policy_and_priority();
+	printf("\n\n");
 
 	thread threads[core_num];
 	for(int i = 0; i < core_num; i++) {
-		threads[i] = thread(test_icmd, fd);
+		threads[i] = thread(test_stl_thread);
 	}
+
 	for(int i = 0; i < core_num; i++) {
 		threads[i].join();
 	}
 
 	icmd_close(&fd);
+	cout << endl << "Done" << endl << endl;
+	return 0;
+}
+//pthread
+int main_pthread() {
+	cout << endl << "Begin" << endl << endl;
+	if(!icmd_open(&fd)) {
+		return -1;
+	}
 
+	pthread_t threads[core_num];
+	pthread_attr_t attr;
+	int ret = 0;
+
+	ret = pthread_attr_init(&attr);
+	assert(ret == 0);
+
+	set_thread_policy_and_priority(&attr, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO));
+	printf("In %s:\n", __FUNCTION__);
+	show_thread_policy_and_priority(&attr);
+	printf("\n\n");
+
+	for(int i = 0; i < core_num; i++) {
+		ret = pthread_create(&threads[i], &attr, &test_pthread_priority, NULL);
+		assert(ret == 0);
+	}
+
+	ret = pthread_attr_destroy(&attr);
+	assert(ret == 0);
+
+	for(int i = 0; i < core_num; i++) {
+		ret = pthread_join(threads[i], NULL);
+		assert(ret == 0);
+	}
+
+	icmd_close(&fd);
 	cout << endl << "Done" << endl << endl;
 	return 0;
 }
