@@ -102,7 +102,6 @@ void print_policy_string(int policy) {
 			break;
 	}
 }
-
 void show_thread_policy_and_priority() {
 	int policy;
 	sched_param sched;
@@ -130,7 +129,7 @@ void show_thread_policy_and_priority(pthread_attr_t *attr) {
 
 	int ret = pthread_attr_getschedparam(attr, &sched);
 	assert(ret == 0);
-	ret == pthread_attr_getschedpolicy(attr, &policy);
+	ret = pthread_attr_getschedpolicy(attr, &policy);
 	assert(ret == 0);
 
 	printf("Thread %ld: ", pthread_self());
@@ -156,7 +155,7 @@ void test_stl_thread() {
 	//icmd_disable_irq(fd, tid);
 	//printf("%ld, %s\n", sched_getcpu(), strerror(errno));
 
-	for(size_t i = 0; i < 10000000000; i++);
+	for(size_t i = 0; i < 5000000000; i++);
 	show_thread_policy_and_priority();
 	//icmd_set_interrupt(fd);
 	//sleep(1);
@@ -168,6 +167,7 @@ void test_stl_thread() {
 
 int fd = -1;
 //STL thread
+//int main_stl_thread() {
 int main() {
 	cout << endl << "Begin" << endl << endl;
 	if(!icmd_open(&fd)) {
@@ -178,6 +178,8 @@ int main() {
 	set_thread_policy_and_priority(SCHED_FIFO, sched_get_priority_max(SCHED_FIFO));
 	show_thread_policy_and_priority();
 	printf("\n\n");
+
+	sleep(1);
 
 	thread threads[core_num];
 	for(int i = 0; i < core_num; i++) {
@@ -194,6 +196,7 @@ int main() {
 }
 //pthread
 int main_pthread() {
+//int main() {
 	cout << endl << "Begin" << endl << endl;
 	if(!icmd_open(&fd)) {
 		return -1;
@@ -206,8 +209,8 @@ int main_pthread() {
 	ret = pthread_attr_init(&attr);
 	assert(ret == 0);
 
-	set_thread_policy_and_priority(&attr, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO));
 	printf("In %s:\n", __FUNCTION__);
+	set_thread_policy_and_priority(&attr, SCHED_FIFO, sched_get_priority_max(SCHED_FIFO));
 	show_thread_policy_and_priority(&attr);
 	printf("\n\n");
 
