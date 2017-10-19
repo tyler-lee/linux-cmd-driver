@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/sysinfo.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <errno.h>
@@ -20,7 +21,7 @@
 
 using namespace std;
 
-const int core_num = 4;
+const int core_num = get_nprocs();
 
 bool icmd_open(int* pfd) {
 	int fd = -1;
