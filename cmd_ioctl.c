@@ -107,6 +107,9 @@ long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg) {
 	case CMD_IOC_SET_INTERRUPT:
 		handler = cmd_ioc_set_interrupt;
 		break;
+	case CMD_IOC_EMPTY_CALL:
+		//this is an empty call
+		return 0;
 	default:
 		return -ENOIOCTLCMD;
 	}
