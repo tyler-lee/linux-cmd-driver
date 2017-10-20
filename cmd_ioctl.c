@@ -21,14 +21,14 @@ DEFINE_PER_CPU(unsigned long, flags);
  * @arg:	pointer to the struct cmd_params
  */
 static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd, unsigned long arg) {
+	unsigned long tmp = 0;
+	struct cmd_params *params = (struct cmd_params *)arg;
 	//disable preempt: preempt_disable is nestable.
 	preempt_disable();
 	//save interrupt flags
-	unsigned long tmp = 0;
 	local_irq_save(tmp);
 
 	get_cpu_var(flags) = tmp;
-	struct cmd_params *params = (struct cmd_params *)arg;
 	params->core = smp_processor_id();
 	params->flags = tmp;
 	put_cpu_var(flags);
@@ -44,14 +44,12 @@ static long cmd_ioc_disable_irq(struct file *filep, unsigned int cmd, unsigned l
  * @arg:	pointer to the struct cmd_params
  */
 static long cmd_ioc_enable_irq(struct file *filep, unsigned int cmd, unsigned long arg) {
-	/*local_bh_enable();*/
+	struct cmd_params *params = (struct cmd_params *)arg;
 	unsigned long tmp = get_cpu_var(flags);
 	pr_info("icmd: core %d enable preempt and irq, flags=%ld\n", smp_processor_id(), tmp);
-	struct cmd_params *params = (struct cmd_params *)arg;
 	params->core = smp_processor_id();
 	params->flags = tmp;
 	put_cpu_var(flags);
-	/*local_bh_disable();*/
 
 	//restore interrupt flags
 	local_irq_restore(tmp);
@@ -109,7 +107,7 @@ long cmd_ioctl(struct file *filep, unsigned int cmd, unsigned long arg) {
 		break;
 	case CMD_IOC_EMPTY_CALL:
 		//this is an empty call
-		return 0;
+		return CMD_SUCCESS;
 	default:
 		return -ENOIOCTLCMD;
 	}
