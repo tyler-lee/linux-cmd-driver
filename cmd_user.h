@@ -3,6 +3,7 @@
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
+#include <sys/ioctl.h>
 
 #define CMD_MAGIC 0xA5
 //#define _IOWR(type,nr,size)	_IOC(_IOC_READ|_IOC_WRITE,(type),(nr),(_IOC_TYPECHECK(size)))
@@ -31,6 +32,7 @@ bool icmd_open(int* pfd);
 void icmd_close(int* pfd);
 void icmd_disable_irq(int fd);
 void icmd_enable_irq(int fd);
+void icmd_empty_ioctl(int fd);
 
 #define test_me_location() do {printf("From %s\n", __FUNCTION__);} while(0)
 
