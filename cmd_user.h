@@ -3,7 +3,6 @@
 
 #include <linux/types.h>
 #include <linux/ioctl.h>
-#include <sys/ioctl.h>
 
 #define CMD_MAGIC 0xA5
 //#define _IOWR(type,nr,size)	_IOC(_IOC_READ|_IOC_WRITE,(type),(nr),(_IOC_TYPECHECK(size)))
