@@ -13,6 +13,7 @@
 #define CMD_IOC_ENABLE_IRQ		_CMD_IOCTL(0x01)
 #define CMD_IOC_SET_INTERRUPT	_CMD_IOCTL(0x02)
 #define CMD_IOC_EMPTY_CALL		_CMD_IOCTL(0x03)
+#define CMD_IOC_SET_APIC_TIMER	_CMD_IOCTL(0x04)
 
 /* CMD leaf instruction return values */
 #define CMD_SUCCESS			0
@@ -23,6 +24,7 @@
 struct cmd_params  {
 	__u64	core;
 	__u64	flags;
+	__u64	clocks;
 	//char para2[12];
 };
 #pragma pack(pop)
@@ -32,6 +34,7 @@ void icmd_close(int* pfd);
 void icmd_disable_irq(int fd);
 void icmd_enable_irq(int fd);
 void icmd_empty_ioctl(int fd);
+void icmd_set_apic_timer(int fd, size_t clocks);
 
 #define test_me_location() do {printf("From %s\n", __FUNCTION__);} while(0)
 
