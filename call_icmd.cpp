@@ -166,6 +166,20 @@ void test_stl_thread() {
 	//test_me_location();
 }
 
+void icmd_set_apic_timer(int fd, size_t clocks) {
+	int ret = 0;
+	struct cmd_params params;
+	memset(&params, 0, sizeof(cmd_params));
+	params.clocks = clocks;
+    ret = ioctl(fd, CMD_IOC_SET_APIC_TIMER, &params);
+    if(ret) {
+        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
+	}
+	else {
+		printf("%s success\n", __FUNCTION__);
+	}
+}
+
 int fd = -1;
 //STL thread
 //int main_stl_thread() {
@@ -180,16 +194,15 @@ int main() {
 	show_thread_policy_and_priority();
 	printf("\n\n");
 
-	sleep(1);
-
-	thread threads[core_num];
-	for(int i = 0; i < core_num; i++) {
-		threads[i] = thread(test_stl_thread);
-	}
-
-	for(int i = 0; i < core_num; i++) {
-		threads[i].join();
-	}
+	icmd_set_apic_timer(fd, 50000);
+	//sleep(1);
+	//thread threads[core_num];
+	//for(int i = 0; i < core_num; i++) {
+		//threads[i] = thread(test_stl_thread);
+	//}
+	//for(int i = 0; i < core_num; i++) {
+		//threads[i].join();
+	//}
 
 	icmd_close(&fd);
 	cout << endl << "Done" << endl << endl;
