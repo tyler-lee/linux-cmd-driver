@@ -19,9 +19,25 @@
 
 #include "cmd_user.h"
 
+int fd = -1;
+
 using namespace std;
 
 const int core_num = get_nprocs();
+
+uint64_t rdtscp() {
+#ifdef __linux__
+	uint64_t a, d;
+	//asm volatile ("xor %%rax, %%rax\n" "cpuid"::: "rax", "rbx", "rcx", "rdx");
+	asm volatile ("rdtscp" : "=a" (a), "=d" (d) : : "rcx");
+	return (d << 32) | a;
+#else
+	unsigned int tsc;
+
+	return __rdtscp(&tsc);
+#endif
+}
+#define clflush(p) asm volatile("clflush (%0)" : : "r" (p) : "memory")
 
 void print_policy_string(int policy) {
 	switch (policy)
@@ -82,6 +98,16 @@ void set_thread_policy_and_priority(pthread_attr_t *attr, int policy, int priori
 	ret = pthread_attr_setschedparam(attr, &sched);
 	assert(ret == 0);
 }
+void set_thread_affinity(int cpu) {
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(cpu, &mask);
+
+	//printf("Thread %lu is running on cpu %d\n", pthread_self(), cpu);
+	int ret = pthread_setaffinity_np(pthread_self(), sizeof(mask), &mask);
+	assert(ret == 0);
+}
+
 
 void* test_pthread_priority(void *) {
 	show_thread_policy_and_priority();
@@ -103,10 +129,69 @@ void test_stl_thread() {
 	//test_me_location();
 }
 
-int fd = -1;
+//测量空的系统调用
+void measurement_empty_ioctl() {
+	size_t count = 1000000;
+	cout << __FUNCTION__ << " (loops): " << count << endl;
+
+	int ret = 0;
+	struct cmd_params params;
+	memset(&params, 0, sizeof(cmd_params));
+
+	uint64_t cycles = rdtscp();
+	for(int i = 0; i < count; i++) {
+		ret = ioctl(fd, CMD_IOC_EMPTY_CALL, &params);
+		if (ret != CMD_SUCCESS) abort();
+	}
+	cycles = rdtscp()-cycles;
+
+	cout << "Result (cycles per inout): " << cycles / count << endl << endl;
+}
+
+void sleep_for_cycles(size_t cycles) {
+	uint64_t end = rdtscp() + cycles;
+	uint64_t clocks = 0;
+	while ((clocks = rdtscp()) < end);
+}
+void _irq_cost_using_apic(int cpu, size_t count) {
+	set_thread_affinity(cpu);
+	printf("Enter core: %d\n", cpu);
+
+	size_t clocks = 600000;
+	uint64_t cycles = rdtscp();
+	for(int i = 0; i < count; i++) {
+		//make sure while apic timer is running when enclave is alive.
+		icmd_set_apic_timer(fd, clocks / 3);
+		sleep_for_cycles(clocks);
+	}
+	cycles = rdtscp()-cycles;
+	cycles = cycles / count;
+
+	if(cycles < clocks) cout << "negetive" << endl;
+	cout << "Result (cycles per mix): " << cycles << endl;
+	cout << "Result (cycles per inout): " << (cycles - clocks) << endl << endl;
+}
+void measure_irq_cost_using_apic() {
+	size_t count = 10000;
+	cout << __FUNCTION__ << " (loops): " << count << endl
+		<< "============ Application Mode =============" << endl;
+
+	_irq_cost_using_apic(sched_getcpu(), count);
+	//thread threads[CORES_PER_CPU];
+	//for(int i = 0; i < CORES_PER_CPU; i++) {
+		//threads[i] = thread(_irq_cost_using_apic, i, count);
+	//}
+	//for(int i = 0; i < CORES_PER_CPU; i++) {
+		//threads[i].join();
+	//}
+}
+
 //STL thread
 //int main_stl_thread() {
 int main() {
+	system("clear");
+    fflush( stdout );
+
 	cout << endl << "Begin" << endl << endl;
 	if(!icmd_open(&fd)) {
 		return -1;
@@ -118,6 +203,8 @@ int main() {
 	printf("\n\n");
 
 	icmd_set_apic_timer(fd, 50000);
+	//measurement_empty_ioctl();
+	//measure_irq_cost_using_apic();
 	//sleep(1);
 	//thread threads[core_num];
 	//for(int i = 0; i < core_num; i++) {
