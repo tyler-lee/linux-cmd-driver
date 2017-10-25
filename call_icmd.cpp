@@ -23,69 +23,6 @@ using namespace std;
 
 const int core_num = get_nprocs();
 
-bool icmd_open(int* pfd) {
-	int fd = -1;
-	*pfd = -1;
-
-    fd = open("/dev/icmd", O_RDWR);
-    if (-1 == fd) {
-        printf("open /dev/icmd failed: errno= %d, %s\n", errno, strerror(errno));
-		return false;
-    }
-
-	*pfd = fd;
-	return true;
-}
-void icmd_close(int* pfd) {
-	if (*pfd != -1)
-	{
-		close(*pfd);
-		*pfd = -1;
-	}
-}
-
-void icmd_disable_irq(int fd, int tid) {
-	int ret = 0;
-	struct cmd_params params = {0, 0};
-	params.core = sched_getcpu();
-	printf("(%d) Try %s: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
-    ret = ioctl(fd, CMD_IOC_DISABLE_IRQ, &params);
-    if(ret) {
-        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
-	}
-	else {
-        printf("(%d) %s success: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
-	}
-}
-
-void icmd_enable_irq(int fd, int tid) {
-	int ret = 0;
-	struct cmd_params params = {0, 0};
-	params.core = sched_getcpu();
-	printf("(%d) Try %s: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
-    ret = ioctl(fd, CMD_IOC_ENABLE_IRQ, &params);
-    if(ret) {
-        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
-	}
-	else {
-        printf("(%d) %s success: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
-	}
-}
-
-void icmd_set_interrupt(int fd, int tid) {
-	int ret = 0;
-	struct cmd_params params = {0, 0};
-	params.core = sched_getcpu();
-	printf("(%d) Try %s: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
-    ret = ioctl(fd, CMD_IOC_SET_INTERRUPT, &params);
-    if(ret) {
-        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
-	}
-	else {
-        printf("(%d) %s success: params= {%lld, %lld}\n", tid, __FUNCTION__, params.core, params.flags);
-	}
-}
-
 void print_policy_string(int policy) {
 	switch (policy)
 	{
@@ -164,20 +101,6 @@ void test_stl_thread() {
 
 	//icmd_enable_irq(fd, tid);
 	//test_me_location();
-}
-
-void icmd_set_apic_timer(int fd, size_t clocks) {
-	int ret = 0;
-	struct cmd_params params;
-	memset(&params, 0, sizeof(cmd_params));
-	params.clocks = clocks;
-    ret = ioctl(fd, CMD_IOC_SET_APIC_TIMER, &params);
-    if(ret) {
-        printf("%s failed: errno= %d, %s\n", __FUNCTION__, errno, strerror(errno));
-	}
-	else {
-		printf("%s success\n", __FUNCTION__);
-	}
 }
 
 int fd = -1;

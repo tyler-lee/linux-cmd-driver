@@ -15,7 +15,7 @@ all:
 
 test:
 	# compile test app
-	g++ call_icmd.cpp -o call_icmd.run -lpthread --std=c++11 -O2
+	g++ call_icmd.cpp cmd_user.cpp -o call_icmd.run -lpthread --std=c++11 -O2
 
 clean:
 # run kernel build system to cleanup in current directory
